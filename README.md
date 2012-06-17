@@ -8,9 +8,8 @@ How to use
 
 Add this code in your *functions.php*.
 
-
-`global $default_theme_pages;
-
+<?php
+global $default_theme_pages;
 $default_theme_pages = array(
  	array(
  		'name' => 'home', 				// slug page
@@ -30,8 +29,8 @@ $default_theme_pages = array(
  		'option' => 'mytheme_contact_page',
  		'description' => 'Contact form page'
  	)
- );`
-
+ );
+?>
 
 Trick
 -----

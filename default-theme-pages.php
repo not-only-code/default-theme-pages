@@ -3,7 +3,7 @@
 Plugin Name: Default theme pages
 Plugin URI: https://github.com/not-only-code/default-theme-pages
 Description: adds unremovable default pages for templating themes
-Version: 0.1
+Version: 0.2
 Author: Carlos Sanz García
 Author URI: http://codingsomething.wordpress.com/
 License: GPLv2 or later
@@ -41,7 +41,7 @@ endif;
  *
  * @since 0.1
  */
-if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.1');
+if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.2');
 if (!defined("DTP_PREFIX")) 		define("DTP_PREFIX", '_dtp_');
 //if (!defined("DTP_PAGE_BASENAME")) 	define('DTP_PAGE_BASENAME', 'default-theme-pages-settings');
 if (!defined("DTP_OPTIONS_NAME")) 	define("DTP_OPTIONS_NAME", 'dtp_options');
@@ -102,32 +102,91 @@ function dtp_create_single_page( $page_slug, $page_option, $page_data ) {
     global $wpdb;
 
     $slug = $page_slug;
-	$page_found = $wpdb->get_var("SELECT ID FROM " . $wpdb->posts . " WHERE post_name = '$slug' AND post_status = 'publish' AND post_status <> 'trash' LIMIT 1");
+	
 	$page_options_id = get_option( $page_option );
-
-    if ( ! $page_found ) {
+	
+	if ( $page_options_id != "" )
+		$page_found = get_page( $page_options_id );
+	
+	if ( !$page_found )
+		$page_found = get_page_by_path($page_slug);
+		
+	if ( !$page_found ) {
 		
 		$create_page = true;
-		if ( $page_options_id <> '' ) :
-			$page_found = $wpdb->get_var( "SELECT ID FROM " . $wpdb->posts . " WHERE ID = '$page_options_id' AND post_status = 'publish' AND post_status <> 'trash' LIMIT 1" );
-			if ( $page_found ) $create_page = false;
-		endif;
-		if ( $create_page ) :
-			$page_data['post_name'] = $slug;
-			$page_options_id = wp_insert_post( $page_data );
-			update_option( $page_option, $page_options_id );
-		endif;
+		$page_data['post_name'] = $page_slug;
+		$page_options_id = wp_insert_post( $page_data );
+		update_option( $page_option, $page_options_id );
 		
-    } else {
+	} else {
 		
-    	if ( $page_options_id == "" ) :
-    		update_option( $page_option, $page_found );
-    	else :
-    		// we have the slug page, another page may be actual page in options (eg: 'shop|store|etc').
-    		// Do we need to check for that page.
-    	endif;
-    }
+		if ( $page_options_id == "" )
+			update_option( $page_option, $page_found->ID );
+	}
 }
+
+
+
+/**
+ * detects if is a default page
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.1
+ *
+**/
+function is_default_page($page = false) {
+	global $default_theme_pages;
+	
+	if ( !$page ) return;
+	
+	if ( !is_object($page) )
+		$page = get_page($page);
+	
+	if ( $page->post_type != 'page' ) return;
+	
+	foreach ( $default_theme_pages as $default_page )
+		if ( get_option($default_page['option']) == $page->ID )
+			return true;
+	
+	return false;
+}
+
+
+
+/**
+ * prevent change 'publish' status from any default page, maintains 'password'
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.2
+ *
+**/
+function dtp_check_status_page( $post_id, $post_after, $post_before ) {
+	global $wpdb, $default_theme_pages;
+	
+	if ( is_default_page($post_after) && $post_after->post_status != 'publish' )
+		wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
+ }
+add_action('post_updated', 'dtp_check_status_page', 640, 3);
+
+
+
+/**
+ * prevent move to trash any default page
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.2
+ *
+**/
+function dtp_trashed_post($post_id = false) {
+	if ( !$post_id ) return;
+	
+	if ( is_default_page($post_id) )
+		wp_update_post(array('ID' => $post_id, 'post_status' => 'publish'));
+}
+add_action('trashed_post', 'dtp_trashed_post', 640);
 
 
 
@@ -172,13 +231,56 @@ function dtp_page_show_columns($name) {
 		case 'blocked':
 			foreach ($default_theme_pages as $page) {
 				if ( get_option($page['option']) == $post->ID ) {
-					echo "<img src=\"" . plugins_url( 'assets/images/gear-icon.png' , __FILE__ ) . "\" width=\"22\" height=\"22\" /><br /><small>" . $page['description'] . "</small>";
+					echo "<img src=\"" . plugins_url( 'assets/images/gear-icon.png' , __FILE__ ) . "\" width=\"19\" height=\"19\" /><br /><small style=\"color: gray\">" . $page['description'] . "</small>";
 				}
 			}
 			break;
 	}
 }
 add_filter('manage_page_posts_custom_column',  'dtp_page_show_columns');
+
+
+
+/**
+ * disable trash button on page publish meta box
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.2
+ *
+**/
+function dtp_remove_delete_link() {
+	global $pagenow, $post;
+	
+	if (!$post) return;
+	
+	if ( $pagenow == 'post.php' && is_default_page($post) ) {
+		echo "<!-- DTP remove delete link -->" . PHP_EOL;
+		echo "<style type=\"text/css\" media=\"screen\">" . PHP_EOL;
+		echo "	#misc-publishing-actions > .misc-pub-section:first-child, #delete-action { display: none !important}" . PHP_EOL;
+		echo "</style>" . PHP_EOL;
+	}
+}
+add_action( 'admin_head', 'dtp_remove_delete_link', 900 );
+
+
+
+/**
+ * disable trash button on page row actions
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.2
+ *
+**/
+function dtp_page_row_actions($actions, $post) {
+	
+	if ( is_default_page($post) )
+		unset($actions['trash']);
+	
+	return $actions;
+}
+add_filter('page_row_actions', 'dtp_page_row_actions', 0, 2);
 
 
 

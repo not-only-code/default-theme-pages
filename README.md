@@ -30,8 +30,22 @@ Add this code in your *functions.php*.
 	 	)
 	 );
 
-
-Trick
------
+**Trick**
 
 If you use `page_on_front` and `page_for_posts` option names, you will block the *home-page* and the *blog-page* on your site.
+
+Templating
+----------
+
+For templating theese pages, the best way is use the **ID**, something like `page-131.php`.
+For detect if you're in that page, something like `is_page(get_option('mytheme_contact_page'))`.
+
+Changelog
+---------
+
+**0.2**  
+* blocked status modifications
+* blocked move to trash
+
+**0.1**  
+* Initial release

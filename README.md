@@ -37,8 +37,14 @@ If you use `page_on_front` and `page_for_posts` option names, you will block the
 Templating
 ----------
 
-For templating theese pages, the best way is use the **ID**, something like `page-131.php`.
-For detect if you're in that page, something like `is_page(get_option('mytheme_contact_page'))`.
+For templating theese pages, the best way is use the **ID**, something like  
+
+	page-131.php
+	
+For detect if you're in that page:
+
+	is_page(get_option('mytheme_contact_page'))
+
 
 Changelog
 ---------

@@ -3,7 +3,7 @@
 Plugin Name: Default theme pages
 Plugin URI: https://github.com/not-only-code/default-theme-pages
 Description: adds unremovable default pages for templating themes
-Version: 0.2
+Version: 0.3
 Author: Carlos Sanz García
 Author URI: http://codingsomething.wordpress.com/
 License: GPLv2 or later
@@ -41,7 +41,7 @@ endif;
  *
  * @since 0.1
  */
-if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.2');
+if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.3');
 if (!defined("DTP_PREFIX")) 		define("DTP_PREFIX", '_dtp_');
 //if (!defined("DTP_PAGE_BASENAME")) 	define('DTP_PAGE_BASENAME', 'default-theme-pages-settings');
 if (!defined("DTP_OPTIONS_NAME")) 	define("DTP_OPTIONS_NAME", 'dtp_options');
@@ -59,8 +59,75 @@ if (!defined("PHP_EOL")) 			define("PHP_EOL", "\r\n");
  *
  * @since 0.1
 **/
+function dtp_template_loader( $template ) {
+	global $default_theme_pages, $post;
+	
+	if (!$post) return $template;
+	
+	if ( $default_page_name = is_default_page($post) ) 
+		if ($template_ = locate_template( "page-$default_page_name.php"))
+			$template = $template_;
+	
+	return $template;
+	
+
+}
+add_filter( 'template_include', 'dtp_template_loader', 0 );
+
+	
+
+
+/**
+ * install default pages and associate it to an db option, needs global $default_theme_pages
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.3
+**/
+function dtp_is_page($option = false) {
+	
+	if ($page_id = dtp_get_page_id($option))
+		if (is_page($page_id))
+			return true;
+	return;
+}
+
+function dtp_get_page_id($option = false) {
+	global $default_theme_pages;
+	
+	if (!$option) return;
+	
+	$page_id = false;
+	if (!isset($default_theme_pages[$option]))
+		foreach ($default_theme_pages as $page) {
+			if (isset($page['option'])) {
+				if ($page['option'] === $option) $page_id = $page['id'];
+			} else {
+				if ($page['name'] === $option) $page_id = $page['id'];
+			}
+		}
+	else
+		$page_id = $default_theme_pages[$option];
+	
+	if ($page_id) return $page_id;
+	
+	return;
+}
+
+/**
+ * install default pages and associate it to an db option, needs global $default_theme_pages
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.1
+**/
 function dtp_install_pages() {
 	global $default_theme_pages;
+	
+	// get options
+	$theme_pages = get_option('default_theme_pages');
+	if (!$theme_pages) $theme_pages = array();
+	wp_cache_set('default_theme_pages', $theme_pages);
 	
 	if ( !isset($default_theme_pages) || empty($default_theme_pages) ) return;
 	
@@ -75,13 +142,20 @@ function dtp_install_pages() {
 		'comment_status' => 'closed'
 	);
 	
-	foreach ($default_theme_pages as $page):
+	foreach ($default_theme_pages as $index => $page):
 		
 		$page_data['post_title'] = $page['title'];
 		if ( isset($page['content']) && $page['content'] != '' ) $page_data['post_content'] = $page['content'];
-		dtp_create_single_page( $page['name'], $page['option'], $page_data );
+		
+		$page_option =  isset($page['option']) ? $page['option'] : false;
+		$page_id = dtp_create_single_page( $page['name'], $page_data, $page_option );
+		
+		if ($page_id) $default_theme_pages[$index]['id'] = $page_id;
 		
 	endforeach;
+	
+	// store all default page ids
+	update_option('default_theme_pages', wp_cache_get('default_theme_pages'));
 }
 add_action( 'after_setup_theme', 'dtp_install_pages');
 
@@ -98,30 +172,65 @@ add_action( 'after_setup_theme', 'dtp_install_pages');
  *
  * @since 0.1
  */
-function dtp_create_single_page( $page_slug, $page_option, $page_data ) {
+function dtp_create_single_page( $page_slug, $page_data, $page_option = false ) {
     global $wpdb;
+	
+	$default_theme_pages = wp_cache_get('default_theme_pages');
 
     $slug = $page_slug;
 	
-	$page_options_id = get_option( $page_option );
+	if ( $page_option ) {
+		$page_options_id = get_option( $page_option );
+	} else {
+		$page_options_id = isset($default_theme_pages[$page_slug]) ? $default_theme_pages[$page_slug] : '';
+	}
 	
 	if ( $page_options_id != "" )
 		$page_found = get_page( $page_options_id );
 	
-	if ( !$page_found )
+	if ( !isset($page_found) || !$page_found )
 		$page_found = get_page_by_path($page_slug);
 		
-	if ( !$page_found ) {
+	if ( !isset($page_found) || !$page_found ) {
 		
 		$create_page = true;
 		$page_data['post_name'] = $page_slug;
 		$page_options_id = wp_insert_post( $page_data );
-		update_option( $page_option, $page_options_id );
+		
+		dtp_store_option($page_options_id, $page_slug, $page_option);
+		
+		return $page_options_id;
 		
 	} else {
 		
 		if ( $page_options_id == "" )
-			update_option( $page_option, $page_found->ID );
+			dtp_store_option($page_found->ID, $page_found->post_name, $page_option );
+		
+		return $page_found->ID;
+	}
+	
+	return;
+}
+
+
+/**
+ * detects if is a default page
+ *
+ * @package Default Theme Pages
+ *
+ * @since 0.3
+ *
+**/
+function dtp_store_option($page_id = false, $page_slug = '', $page_option = false) {
+	
+	if ( $page_slug === '' || !$page_id ) return;
+	
+	if ( $page_option ) {
+		update_option( $page_option, $page_id ); 
+	} else {
+		$default_theme_pages = wp_cache_get('default_theme_pages');
+		$default_theme_pages[$page_slug] = $page_id;
+		wp_cache_set('default_theme_pages', $default_theme_pages);
 	}
 }
 
@@ -138,7 +247,7 @@ function dtp_create_single_page( $page_slug, $page_option, $page_data ) {
 function is_default_page($page = false) {
 	global $default_theme_pages;
 	
-	if ( !$page ) return;
+	if ( !$page || !$default_theme_pages ) return;
 	
 	if ( !is_object($page) )
 		$page = get_page($page);
@@ -146,8 +255,8 @@ function is_default_page($page = false) {
 	if ( $page->post_type != 'page' ) return;
 	
 	foreach ( $default_theme_pages as $default_page )
-		if ( get_option($default_page['option']) == $page->ID )
-			return true;
+		if ( $default_page['id'] == $page->ID )
+			return $default_page['name'];
 	
 	return false;
 }
@@ -227,10 +336,12 @@ add_filter('manage_edit-page_columns', 'dtp_page_columns');
 function dtp_page_show_columns($name) {
 	global $post, $default_theme_pages;
 	
+	if (!isset($default_theme_pages)) return;
+	
 	switch ($name) {
 		case 'blocked':
 			foreach ($default_theme_pages as $page) {
-				if ( get_option($page['option']) == $post->ID ) {
+				if ( $page['id'] == $post->ID ) {
 					echo "<img src=\"" . plugins_url( 'assets/images/gear-icon.png' , __FILE__ ) . "\" width=\"19\" height=\"19\" /><br /><small style=\"color: gray\">" . $page['description'] . "</small>";
 				}
 			}

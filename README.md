@@ -1,8 +1,6 @@
 Default Theme Pages
 ===================
 
-Adds unremovable default pages for templating themes.
-
 New in version 0.3
 ------------------
 
@@ -39,8 +37,8 @@ Add this code in your *functions.php*.
 Tips
 ----
 
-*After the pages are created automatically, you can change their title and slug without problem.
-*If you add an `option` names: `page_on_front` and `page_for_posts`, you will block the *home-page* and the *blog-page* on your site.
+* After the pages are created automatically, you can change their title and slug without problem.
+* If you add an `option` names: `page_on_front` and `page_for_posts`, you will block the *home-page* and the *blog-page* on your site.
 
 
 Templating

@@ -1,12 +1,12 @@
 Default Theme Pages
 ===================
 
-New in version 0.3
+New in version 0.4
 ------------------
 
-* changed stored system to gain performance
-* added some accessible functions: `dtp_is_page`, `dtp_get_page_id`
-* added default pages in template system, now you can template a default page as: `page-name.php`
+* added `object` (page object) in every $default_theme_pages item for fast access.
+* added all default pages to wp toolbar, inside 'site name', to increase user experience.
+
 
 How to use
 ----------
@@ -60,14 +60,19 @@ Getting a default page id:
 Changelog
 ---------
 
+**0.4**  
+* added 'object' (page object) in every $default_theme_pages item for fast access.
+* added all default pages to wp toolbar, inside 'site name', to increase user experience.
+
 **0.3**  
-* changed stored system to gain performance
-* added some accessible functions: `dtp_is_page`, `dtp_get_page_id`
-* added default pages in template system, now you can template a default page as: `page-name.php`
+* changed stored system to gain performance.
+* added `id` in every $default_theme_pages item for fast access.
+* added some accessible functions: `dtp_is_page`, `dtp_get_page_id`.
+* added default pages in template system, now you can template a default page as: `page-name.php`.
 
 **0.2**    
-* blocked status modifications
-* blocked move to trash
+* blocked status modifications.
+* blocked move to trash.
 
 **0.1**  
-* Initial release
+* Initial release.

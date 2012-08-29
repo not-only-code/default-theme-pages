@@ -3,7 +3,7 @@
 Plugin Name: Default theme pages
 Plugin URI: https://github.com/not-only-code/default-theme-pages
 Description: adds unremovable default pages for templating themes
-Version: 0.3
+Version: 0.4
 Author: Carlos Sanz García
 Author URI: http://codingsomething.wordpress.com/
 License: GPLv2 or later
@@ -41,7 +41,7 @@ endif;
  *
  * @since 0.1
  */
-if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.3');
+if (!defined("DTP_VERSION")) 		define("DTP_VERSION", '0.4');
 if (!defined("DTP_PREFIX")) 		define("DTP_PREFIX", '_dtp_');
 //if (!defined("DTP_PAGE_BASENAME")) 	define('DTP_PAGE_BASENAME', 'default-theme-pages-settings');
 if (!defined("DTP_OPTIONS_NAME")) 	define("DTP_OPTIONS_NAME", 'dtp_options');
@@ -148,9 +148,22 @@ function dtp_install_pages() {
 		if ( isset($page['content']) && $page['content'] != '' ) $page_data['post_content'] = $page['content'];
 		
 		$page_option =  isset($page['option']) ? $page['option'] : false;
-		$page_id = dtp_create_single_page( $page['name'], $page_data, $page_option );
+		$page_result = dtp_create_single_page( $page['name'], $page_data, $page_option );
 		
-		if ($page_id) $default_theme_pages[$index]['id'] = $page_id;
+		if ($page_result) {
+			if (is_int($page_result)) {
+				$page_id = $page_result;
+				$page_object = get_page($page_result);
+			} elseif (is_object($page_result) && isset($page_result->ID) ) {
+				$page_id = $page_result->ID;
+				$page_object = $page_result;
+			} else {
+				break;
+			}
+				
+			$default_theme_pages[$index]['id'] = $page_id;
+			$default_theme_pages[$index]['object'] = $page_object;
+		}
 		
 	endforeach;
 	
@@ -206,7 +219,7 @@ function dtp_create_single_page( $page_slug, $page_data, $page_option = false ) 
 		if ( $page_options_id == "" )
 			dtp_store_option($page_found->ID, $page_found->post_name, $page_option );
 		
-		return $page_found->ID;
+		return $page_found;
 	}
 	
 	return;
@@ -373,6 +386,41 @@ function dtp_remove_delete_link() {
 	}
 }
 add_action( 'admin_head', 'dtp_remove_delete_link', 900 );
+
+
+
+/**
+ * Adds default pages to the WP Admin Bar.
+ * 
+ * @since 4.0
+ *
+ * @global mixed $wp_admin_bar 
+ */
+function dtp_admin_bar_menu($wp_admin_bar) {
+    global $wp_admin_bar, $default_theme_pages;
+	
+	if (isset($default_theme_pages) && !empty($default_theme_pages)):
+
+		$args = array(
+			'id' => 'default-pages', 
+			'parent' => 'site-name',
+			'meta' => array('class' => 'ab-sub-secondary ab-submenu')
+		);
+		$wp_admin_bar->add_group($args);
+	
+		foreach ($default_theme_pages as $default_page):
+		    $args = array(
+		      'id' => 'default-page-'.$default_page['id'],
+		      'title' => $default_page['object']->post_title,
+		      'parent' => 'default-pages',
+			  'href' => is_admin() ? admin_url('/post.php?post='.$default_page['id'].'&action=edit') : get_permalink($default_page['id']),
+		    );		
+			$wp_admin_bar->add_node($args);
+		endforeach;
+	
+	endif;	
+}
+add_action( 'admin_bar_menu', 'dtp_admin_bar_menu', 100 );
 
 
 

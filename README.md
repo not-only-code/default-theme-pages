@@ -1,6 +1,9 @@
 Default Theme Pages
 ===================
 
+This plugin is intended to be useful for template developers
+------------------------------------------------------------
+
 New in version 0.4
 ------------------
 

@@ -7,7 +7,7 @@ This plugin is intended to be useful for template developers
 New in version 0.4
 ------------------
 
-* added `object` (page object) in every $default_theme_pages item for fast access.
+* added `object` (page object) in every `$default_theme_pages` item for fast access.
 * added all default pages to wp toolbar, inside 'site name', to increase user experience.
 
 
@@ -16,8 +16,8 @@ How to use
 
 Add this code in your *functions.php*.
 
-	global $default_theme_pages;
-	$default_theme_pages = array(
+	global `$default_theme_pages`;
+	`$default_theme_pages` = array(
 	 	array(
 	 		'name' => 'home',				// initial slug page / id for templating - access functions
 	 		'title' => 'Homepage',			// page title
@@ -47,9 +47,9 @@ Tips
 Templating
 ----------
 
-You can template using **ID** or **name** (setted up in $default_theme_pages global variable ), something like:
+You can template using **ID** or **name** (setted up in `$default_theme_pages` global variable ), something like:
 
-`page-131.php` or `page-contact.php` (If you change the page slug, this will still work because 'contact' was defined as *pagename* if $default_theme_pages global variable).
+`page-131.php` or `page-contact.php` (If you change the page slug, this will still work because 'contact' was defined as *pagename* if `$default_theme_pages` global variable).
 
 For detect if you're in that page:
 
@@ -64,12 +64,12 @@ Changelog
 ---------
 
 **0.4**  
-* added 'object' (page object) in every $default_theme_pages item for fast access.
+* added 'object' (page object) in every `$default_theme_pages` item for fast access.
 * added all default pages to wp toolbar, inside 'site name', to increase user experience.
 
 **0.3**  
 * changed stored system to gain performance.
-* added `id` in every $default_theme_pages item for fast access.
+* added `id` in every `$default_theme_pages` item for fast access.
 * added some accessible functions: `dtp_is_page`, `dtp_get_page_id`.
 * added default pages in template system, now you can template a default page as: `page-name.php`.
 
